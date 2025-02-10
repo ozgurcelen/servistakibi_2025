@@ -24,27 +24,14 @@ def load_durumlar():
     with open(DURUM_FILE, "r") as f:
         return json.load(f)
 
-# 📌 Menü Butonları
-st.title("📌 Menü")
-
-col1, col2, col3, col4, col5 = st.columns(5)
-
-if col1.button("Haritayı Göster"):
-    st.session_state["sayfa"] = "Haritayı Göster"
-if col2.button("Kayıt Ol"):
-    st.session_state["sayfa"] = "Kayıt Ol"
-if col3.button("Durum Güncelle"):
-    st.session_state["sayfa"] = "Durum Güncelle"
-if col4.button("Aktif Kullanıcılar"):
-    st.session_state["sayfa"] = "Aktif Kullanıcılar"
-if col5.button("Kullanıcı Düzenle"):
-    st.session_state["sayfa"] = "Kullanıcı Düzenle"
-
-sayfa = st.session_state.get("sayfa", "Haritayı Göster")
+# 📌 Sidebar Menüsü
+st.sidebar.title("📌 Menü")
+sayfa = st.sidebar.radio("Seçenekler:", ["Haritayı Göster", "Kayıt Ol", "Durum Güncelle", "Aktif Kullanıcılar", "Kullanıcı Düzenle"])
 
 # **Haritayı Göster Sayfası**
 if sayfa == "Haritayı Göster":
     st.title("📍 Servis Noktaları")
+
     kullanicilar = load_users()
     m = folium.Map(location=[40.934444429879434, 29.32820863673836], zoom_start=13)
 
@@ -60,6 +47,7 @@ if sayfa == "Haritayı Göster":
 # **Kayıt Ol Sayfası**
 elif sayfa == "Kayıt Ol":
     st.title("📝 Kayıt Ol")
+
     ad = st.text_input("Adınız")
     soyad = st.text_input("Soyadınız")
     telefon = st.text_input("Telefon Numaranız")
@@ -85,16 +73,17 @@ elif sayfa == "Kayıt Ol":
 # **Durum Güncelleme Sayfası**
 elif sayfa == "Durum Güncelle":
     st.title("🔴🟢 Kullanıcı Durumu Güncelle")
+
     kullanicilar = load_users()
     durumlar = load_durumlar()
-    
+
     if not kullanicilar:
         st.warning("Henüz kayıtlı kimse yok.")
     else:
         for k in kullanicilar:
             ad = k["ad"]
             mevcut_durum = durumlar.get(ad, False)
-            
+
             if st.button(f"{ad} - {'🟢 Aktif' if mevcut_durum else '🔴 Pasif'}", key=f"durum_{ad}"):
                 durumlar[ad] = not mevcut_durum
                 with open(DURUM_FILE, "w") as f:
@@ -104,22 +93,36 @@ elif sayfa == "Durum Güncelle":
 # **Aktif Kullanıcıları Listeleme Sayfası**
 elif sayfa == "Aktif Kullanıcılar":
     st.title("🟢 Aktif Kullanıcılar")
+
     kullanicilar = load_users()
     durumlar = load_durumlar()
+
+     # 🔥 **Aktif kullanıcıları filtreleme**
     aktif_kullanicilar = [k for k in kullanicilar if durumlar.get(k["ad"], False)]
     aktif_kullanicilar = sorted(aktif_kullanicilar, key=lambda k: k['lat'])
 
+
+    
     if not aktif_kullanicilar:
         st.warning("Henüz aktif olan kullanıcı yok.")
     else:
         df = pd.DataFrame(aktif_kullanicilar)
         st.write(df)
 
+        # **Google Haritalar yönlendirme**
+        if len(aktif_kullanicilar) > 1:
+            baslangic = f"{aktif_kullanicilar[0]['lat']},{aktif_kullanicilar[0]['lon']}"  # Güneydeki en küçük enlem
+            destination = f"{aktif_kullanicilar[-1]['lat']},{aktif_kullanicilar[-1]['lon']}"  # Kuzeydeki en büyük enlem
+            waypoints = "|".join([f"{k['lat']},{k['lon']}" for k in aktif_kullanicilar[1:-1]])  # Başlangıç ve varış hariç
+            maps_url = f"https://www.google.com/maps/dir/?api=1&origin={baslangic}&destination={destination}&waypoints={waypoints}"
+            st.markdown(f"[📍 Google Haritalar'da Aç]({maps_url})", unsafe_allow_html=True)
+
 # **Kullanıcı Düzenleme Sayfası**
 elif sayfa == "Kullanıcı Düzenle":
     st.title("📝 Kullanıcı Düzenleme")
+
     kullanicilar = load_users()
-    
+
     if not kullanicilar:
         st.warning("Henüz kayıtlı kimse yok.")
     else:
@@ -136,3 +139,29 @@ elif sayfa == "Kullanıcı Düzenle":
                     with open(JSON_FILE, "w") as f:
                         json.dump(kullanicilar, f, indent=4)
                     st.rerun()
+
+        if "edit_user" in st.session_state:
+            st.subheader("🔄 Kullanıcı Bilgilerini Güncelle")
+            edit_data = st.session_state["edit_user"]
+            ad = st.text_input("Adınız", edit_data["ad"])
+            soyad = st.text_input("Soyadınız", edit_data["soyad"])
+            telefon = st.text_input("Telefon Numaranız", edit_data["telefon"])
+            koordinat = st.text_input("Koordinatlar (Enlem, Boylam)", f"{edit_data['lat']}, {edit_data['lon']}")
+
+            if st.button("Güncelle"):
+                lat, lon = map(float, koordinat.split(","))
+                for user in kullanicilar:
+                    if user["ad"] == edit_data["ad"]:
+                        user["ad"] = ad
+                        user["soyad"] = soyad
+                        user["telefon"] = telefon
+                        user["lat"] = lat
+                        user["lon"] = lon
+                        break
+                
+                with open(JSON_FILE, "w") as f:
+                    json.dump(kullanicilar, f, indent=4)
+
+                del st.session_state["edit_user"]
+                st.success("Kullanıcı bilgileri güncellendi!")
+                st.rerun()
