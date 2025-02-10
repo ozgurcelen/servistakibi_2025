@@ -30,7 +30,7 @@ sayfa = st.sidebar.radio("Seçenekler:", ["Haritayı Göster", "Kayıt Ol", "Dur
 
 # **Haritayı Göster Sayfası**
 if sayfa == "Haritayı Göster":
-    st.title("📍 Harita Görüntüleme")
+    st.title("📍 Servis Noktaları")
 
     kullanicilar = load_users()
     m = folium.Map(location=[40.934444429879434, 29.32820863673836], zoom_start=13)
