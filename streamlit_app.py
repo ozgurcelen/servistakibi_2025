@@ -98,7 +98,7 @@ elif sayfa == "Aktif Kullanıcılar":
     durumlar = load_durumlar()
 
     # 🔥 **Aktif kullanıcıları filtreleme**
-    aktif_kullanicilar = [k for k in kullanicilar if durumlar.get(k["ad"], False)]
+    aktif_kullanicilar = sorted(aktif_kullanicilar, key=lambda x: x["lat"])
 
     if not aktif_kullanicilar:
         st.warning("Henüz aktif olan kullanıcı yok.")
@@ -108,8 +108,8 @@ elif sayfa == "Aktif Kullanıcılar":
 
         # **Google Haritalar yönlendirme**
         if len(aktif_kullanicilar) > 1:
-            baslangic = f"{aktif_kullanicilar[0]['lat']},{aktif_kullanicilar[0]['lon']}"
-            destination = f"{aktif_kullanicilar[-1]['lat']},{aktif_kullanicilar[-1]['lon']}"
+            baslangic = f"{aktif_kullanicilar[0]['lat']},{aktif_kullanicilar[0]['lon']}"  # Güneydeki en küçük enlem
+            destination = f"{aktif_kullanicilar[-1]['lat']},{aktif_kullanicilar[-1]['lon']}"  # Kuzeydeki en büyük enlem
             waypoints = "|".join([f"{k['lat']},{k['lon']}" for k in aktif_kullanicilar[1:-1]])  # Başlangıç ve varış hariç
             maps_url = f"https://www.google.com/maps/dir/?api=1&origin={baslangic}&destination={destination}&waypoints={waypoints}"
             st.markdown(f"[📍 Google Haritalar'da Aç]({maps_url})", unsafe_allow_html=True)
