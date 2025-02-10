@@ -5,11 +5,9 @@ import folium
 from streamlit_folium import st_folium
 import pandas as pd
 
-# 📌 JSON Dosya Yolları
 JSON_FILE = "kullanicilar.json"
 DURUM_FILE = "durumlar.json"
 
-# 📌 JSON Dosyaları Yoksa Oluştur
 if not os.path.exists(JSON_FILE):
     with open(JSON_FILE, "w") as f:
         json.dump([], f)
@@ -18,7 +16,6 @@ if not os.path.exists(DURUM_FILE):
     with open(DURUM_FILE, "w") as f:
         json.dump({}, f)
 
-# 📌 JSON Dosyasını Oku
 def load_users():
     with open(JSON_FILE, "r") as f:
         return json.load(f)
