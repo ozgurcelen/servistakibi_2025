@@ -97,15 +97,14 @@ elif sayfa == "Aktif Kullanıcılar":
     kullanicilar = load_users()
     durumlar = load_durumlar()
 
-    # 🔥 **Aktif kullanıcıları filtreleme**
-    aktif_kullanicilar = sorted(aktif_kullanicilar, key=lambda x: x["lat"])
-
     if not aktif_kullanicilar:
         st.warning("Henüz aktif olan kullanıcı yok.")
     else:
         df = pd.DataFrame(aktif_kullanicilar)
         st.write(df)
-
+        
+        # 🔥 **Aktif kullanıcıları filtreleme**
+        aktif_kullanicilar = sorted(aktif_kullanicilar, key=lambda x: x["lat"])
         # **Google Haritalar yönlendirme**
         if len(aktif_kullanicilar) > 1:
             baslangic = f"{aktif_kullanicilar[0]['lat']},{aktif_kullanicilar[0]['lon']}"  # Güneydeki en küçük enlem
