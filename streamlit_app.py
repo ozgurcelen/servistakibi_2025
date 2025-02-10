@@ -23,10 +23,47 @@ def load_users():
 def load_durumlar():
     with open(DURUM_FILE, "r") as f:
         return json.load(f)
-
-# 📌 Sidebar Menüsü
+ 📌 Sidebar Menüsü (Butonlar ile)
 st.sidebar.title("📌 Menü")
-sayfa = st.sidebar.radio("Seçenekler:", ["Haritayı Göster", "Kayıt Ol", "Durum Güncelle", "Aktif Kullanıcılar", "Kullanıcı Düzenle"])
+
+# Sayfa durumunu belirlemek için bir session_state kullanıyoruz
+if "sayfa" not in st.session_state:
+    st.session_state.sayfa = "Haritayı Göster"
+
+# Butonlar ile sayfa kontrolü
+if st.sidebar.button("🗺️ Haritayı Göster"):
+    st.session_state.sayfa = "Haritayı Göster"
+
+if st.sidebar.button("📝 Kayıt Ol"):
+    st.session_state.sayfa = "Kayıt Ol"
+
+if st.sidebar.button("🔄 Durum Güncelle"):
+    st.session_state.sayfa = "Durum Güncelle"
+
+if st.sidebar.button("👥 Aktif Kullanıcılar"):
+    st.session_state.sayfa = "Aktif Kullanıcılar"
+
+if st.sidebar.button("⚙️ Kullanıcı Düzenle"):
+    st.session_state.sayfa = "Kullanıcı Düzenle"
+
+# Sayfa içeriğini göster
+st.write(f"**Seçili Sayfa:** {st.session_state.sayfa}")
+
+# Sayfa içeriklerini belirleme
+if st.session_state.sayfa == "Haritayı Göster":
+    st.write("🗺️ Google Haritalar görüntüleniyor...")
+
+elif st.session_state.sayfa == "Kayıt Ol":
+    st.write("📝 Kullanıcı kayıt ekranı.")
+
+elif st.session_state.sayfa == "Durum Güncelle":
+    st.write("🔄 Kullanıcı durumu güncelleme ekranı.")
+
+elif st.session_state.sayfa == "Aktif Kullanıcılar":
+    st.write("👥 Aktif kullanıcılar listeleniyor...")
+
+elif st.session_state.sayfa == "Kullanıcı Düzenle":
+    st.write("⚙️ Kullanıcı düzenleme ekranı.")
 
 # **Haritayı Göster Sayfası**
 if sayfa == "Haritayı Göster":
