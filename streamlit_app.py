@@ -1,172 +1,166 @@
-import datetime
-import random
-
-import altair as alt
-import numpy as np
-import pandas as pd
 import streamlit as st
+import json
+import os
+import folium
+from streamlit_folium import st_folium
+import pandas as pd
 
-# Show app title and description.
-st.set_page_config(page_title="Support tickets", page_icon="🎫")
-st.title("🎫 Support tickets")
-st.write(
-    """
-    This app shows how you can build an internal tool in Streamlit. Here, we are 
-    implementing a support ticket workflow. The user can create a ticket, edit 
-    existing tickets, and view some statistics.
-    """
-)
+# 📌 JSON Dosya Yolları
+JSON_FILE = "kullanicilar.json"
+DURUM_FILE = "durumlar.json"
 
-# Create a random Pandas dataframe with existing tickets.
-if "df" not in st.session_state:
+# 📌 JSON Dosyaları Yoksa Oluştur
+if not os.path.exists(JSON_FILE):
+    with open(JSON_FILE, "w") as f:
+        json.dump([], f)
 
-    # Set seed for reproducibility.
-    np.random.seed(42)
+if not os.path.exists(DURUM_FILE):
+    with open(DURUM_FILE, "w") as f:
+        json.dump({}, f)
 
-    # Make up some fake issue descriptions.
-    issue_descriptions = [
-        "Network connectivity issues in the office",
-        "Software application crashing on startup",
-        "Printer not responding to print commands",
-        "Email server downtime",
-        "Data backup failure",
-        "Login authentication problems",
-        "Website performance degradation",
-        "Security vulnerability identified",
-        "Hardware malfunction in the server room",
-        "Employee unable to access shared files",
-        "Database connection failure",
-        "Mobile application not syncing data",
-        "VoIP phone system issues",
-        "VPN connection problems for remote employees",
-        "System updates causing compatibility issues",
-        "File server running out of storage space",
-        "Intrusion detection system alerts",
-        "Inventory management system errors",
-        "Customer data not loading in CRM",
-        "Collaboration tool not sending notifications",
-    ]
+# 📌 JSON Dosyasını Oku
+def load_users():
+    with open(JSON_FILE, "r") as f:
+        return json.load(f)
 
-    # Generate the dataframe with 100 rows/tickets.
-    data = {
-        "ID": [f"TICKET-{i}" for i in range(1100, 1000, -1)],
-        "Issue": np.random.choice(issue_descriptions, size=100),
-        "Status": np.random.choice(["Open", "In Progress", "Closed"], size=100),
-        "Priority": np.random.choice(["High", "Medium", "Low"], size=100),
-        "Date Submitted": [
-            datetime.date(2023, 6, 1) + datetime.timedelta(days=random.randint(0, 182))
-            for _ in range(100)
-        ],
-    }
-    df = pd.DataFrame(data)
+def load_durumlar():
+    with open(DURUM_FILE, "r") as f:
+        return json.load(f)
 
-    # Save the dataframe in session state (a dictionary-like object that persists across
-    # page runs). This ensures our data is persisted when the app updates.
-    st.session_state.df = df
+# 📌 Sidebar Menüsü
+st.sidebar.title("📌 Menü")
+sayfa = st.sidebar.radio("Seçenekler:", ["Haritayı Göster", "Kayıt Ol", "Durum Güncelle", "Aktif Kullanıcılar", "Kullanıcı Düzenle"])
 
+# **Haritayı Göster Sayfası**
+if sayfa == "Haritayı Göster":
+    st.title("📍 Harita Görüntüleme")
 
-# Show a section to add a new ticket.
-st.header("Add a ticket")
+    kullanicilar = load_users()
+    m = folium.Map(location=[40.934444429879434, 29.32820863673836], zoom_start=13)
 
-# We're adding tickets via an `st.form` and some input widgets. If widgets are used
-# in a form, the app will only rerun once the submit button is pressed.
-with st.form("add_ticket_form"):
-    issue = st.text_area("Describe the issue")
-    priority = st.selectbox("Priority", ["High", "Medium", "Low"])
-    submitted = st.form_submit_button("Submit")
+    for k in kullanicilar:
+        folium.Marker(
+            location=[k["lat"], k["lon"]],
+            popup=f"{k['ad']} {k['soyad']}",
+            icon=folium.Icon(color="blue")
+        ).add_to(m)
 
-if submitted:
-    # Make a dataframe for the new ticket and append it to the dataframe in session
-    # state.
-    recent_ticket_number = int(max(st.session_state.df.ID).split("-")[1])
-    today = datetime.datetime.now().strftime("%m-%d-%Y")
-    df_new = pd.DataFrame(
-        [
-            {
-                "ID": f"TICKET-{recent_ticket_number+1}",
-                "Issue": issue,
-                "Status": "Open",
-                "Priority": priority,
-                "Date Submitted": today,
-            }
-        ]
-    )
+    st_folium(m, width=800, height=500)
 
-    # Show a little success message.
-    st.write("Ticket submitted! Here are the ticket details:")
-    st.dataframe(df_new, use_container_width=True, hide_index=True)
-    st.session_state.df = pd.concat([df_new, st.session_state.df], axis=0)
+# **Kayıt Ol Sayfası**
+elif sayfa == "Kayıt Ol":
+    st.title("📝 Kayıt Ol")
 
-# Show section to view and edit existing tickets in a table.
-st.header("Existing tickets")
-st.write(f"Number of tickets: `{len(st.session_state.df)}`")
+    ad = st.text_input("Adınız")
+    soyad = st.text_input("Soyadınız")
+    telefon = st.text_input("Telefon Numaranız")
+    koordinat = st.text_input("Koordinatlar (Enlem, Boylam)", value="40.934444429879434, 29.32820863673836")
 
-st.info(
-    "You can edit the tickets by double clicking on a cell. Note how the plots below "
-    "update automatically! You can also sort the table by clicking on the column headers.",
-    icon="✍️",
-)
+    if st.button("Kaydol"):
+        try:
+            lat, lon = map(float, koordinat.split(","))
+            users = load_users()
+            users.append({"ad": ad, "soyad": soyad, "telefon": telefon, "lat": lat, "lon": lon})
+            with open(JSON_FILE, "w") as f:
+                json.dump(users, f, indent=4)
 
-# Show the tickets dataframe with `st.data_editor`. This lets the user edit the table
-# cells. The edited data is returned as a new dataframe.
-edited_df = st.data_editor(
-    st.session_state.df,
-    use_container_width=True,
-    hide_index=True,
-    column_config={
-        "Status": st.column_config.SelectboxColumn(
-            "Status",
-            help="Ticket status",
-            options=["Open", "In Progress", "Closed"],
-            required=True,
-        ),
-        "Priority": st.column_config.SelectboxColumn(
-            "Priority",
-            help="Priority",
-            options=["High", "Medium", "Low"],
-            required=True,
-        ),
-    },
-    # Disable editing the ID and Date Submitted columns.
-    disabled=["ID", "Date Submitted"],
-)
+            durumlar = load_durumlar()
+            durumlar[ad] = False  # Varsayılan olarak pasif
+            with open(DURUM_FILE, "w") as f:
+                json.dump(durumlar, f, indent=4)
 
-# Show some metrics and charts about the ticket.
-st.header("Statistics")
+            st.success(f"✅ {ad} {soyad}, başarıyla kayıt oldunuz!")
+        except ValueError:
+            st.error("❌ Hatalı koordinat formatı!")
 
-# Show metrics side by side using `st.columns` and `st.metric`.
-col1, col2, col3 = st.columns(3)
-num_open_tickets = len(st.session_state.df[st.session_state.df.Status == "Open"])
-col1.metric(label="Number of open tickets", value=num_open_tickets, delta=10)
-col2.metric(label="First response time (hours)", value=5.2, delta=-1.5)
-col3.metric(label="Average resolution time (hours)", value=16, delta=2)
+# **Durum Güncelleme Sayfası**
+elif sayfa == "Durum Güncelle":
+    st.title("🔴🟢 Kullanıcı Durumu Güncelle")
 
-# Show two Altair charts using `st.altair_chart`.
-st.write("")
-st.write("##### Ticket status per month")
-status_plot = (
-    alt.Chart(edited_df)
-    .mark_bar()
-    .encode(
-        x="month(Date Submitted):O",
-        y="count():Q",
-        xOffset="Status:N",
-        color="Status:N",
-    )
-    .configure_legend(
-        orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5
-    )
-)
-st.altair_chart(status_plot, use_container_width=True, theme="streamlit")
+    kullanicilar = load_users()
+    durumlar = load_durumlar()
 
-st.write("##### Current ticket priorities")
-priority_plot = (
-    alt.Chart(edited_df)
-    .mark_arc()
-    .encode(theta="count():Q", color="Priority:N")
-    .properties(height=300)
-    .configure_legend(
-        orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5
-    )
-)
-st.altair_chart(priority_plot, use_container_width=True, theme="streamlit")
+    if not kullanicilar:
+        st.warning("Henüz kayıtlı kimse yok.")
+    else:
+        for k in kullanicilar:
+            ad = k["ad"]
+            mevcut_durum = durumlar.get(ad, False)
+
+            if st.button(f"{ad} - {'🟢 Aktif' if mevcut_durum else '🔴 Pasif'}", key=f"durum_{ad}"):
+                durumlar[ad] = not mevcut_durum
+                with open(DURUM_FILE, "w") as f:
+                    json.dump(durumlar, f, indent=4)
+                st.rerun()
+
+# **Aktif Kullanıcıları Listeleme Sayfası**
+elif sayfa == "Aktif Kullanıcılar":
+    st.title("🟢 Aktif Kullanıcılar")
+
+    kullanicilar = load_users()
+    durumlar = load_durumlar()
+
+    # 🔥 **Aktif kullanıcıları filtreleme**
+    aktif_kullanicilar = [k for k in kullanicilar if durumlar.get(k["ad"], False)]
+
+    if not aktif_kullanicilar:
+        st.warning("Henüz aktif olan kullanıcı yok.")
+    else:
+        df = pd.DataFrame(aktif_kullanicilar)
+        st.write(df)
+
+        # **Google Haritalar yönlendirme**
+        if len(aktif_kullanicilar) > 1:
+            baslangic = f"{aktif_kullanicilar[0]['lat']},{aktif_kullanicilar[0]['lon']}"
+            waypoints = "/".join([f"{k['lat']},{k['lon']}" for k in aktif_kullanicilar[1:]])
+            maps_url = f"https://www.google.com/maps/dir/{baslangic}/{waypoints}"
+            st.markdown(f"[📍 Google Haritalar'da Aç]({maps_url})", unsafe_allow_html=True)
+
+# **Kullanıcı Düzenleme Sayfası**
+elif sayfa == "Kullanıcı Düzenle":
+    st.title("📝 Kullanıcı Düzenleme")
+
+    kullanicilar = load_users()
+
+    if not kullanicilar:
+        st.warning("Henüz kayıtlı kimse yok.")
+    else:
+        for k in kullanicilar:
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col1:
+                st.write(f"**{k['ad']} {k['soyad']}** - {k['telefon']}")
+            with col2:
+                if st.button("Düzenle", key=f"edit_{k['ad']}"):
+                    st.session_state["edit_user"] = k
+            with col3:
+                if st.button("Sil", key=f"delete_{k['ad']}"):
+                    kullanicilar = [u for u in kullanicilar if u["ad"] != k["ad"]]
+                    with open(JSON_FILE, "w") as f:
+                        json.dump(kullanicilar, f, indent=4)
+                    st.rerun()
+
+        if "edit_user" in st.session_state:
+            st.subheader("🔄 Kullanıcı Bilgilerini Güncelle")
+            edit_data = st.session_state["edit_user"]
+            ad = st.text_input("Adınız", edit_data["ad"])
+            soyad = st.text_input("Soyadınız", edit_data["soyad"])
+            telefon = st.text_input("Telefon Numaranız", edit_data["telefon"])
+            koordinat = st.text_input("Koordinatlar (Enlem, Boylam)", f"{edit_data['lat']}, {edit_data['lon']}")
+
+            if st.button("Güncelle"):
+                lat, lon = map(float, koordinat.split(","))
+                for user in kullanicilar:
+                    if user["ad"] == edit_data["ad"]:
+                        user["ad"] = ad
+                        user["soyad"] = soyad
+                        user["telefon"] = telefon
+                        user["lat"] = lat
+                        user["lon"] = lon
+                        break
+                
+                with open(JSON_FILE, "w") as f:
+                    json.dump(kullanicilar, f, indent=4)
+
+                del st.session_state["edit_user"]
+                st.success("Kullanıcı bilgileri güncellendi!")
+                st.rerun()
