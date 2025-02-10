@@ -110,7 +110,7 @@ elif sayfa == "Aktif Kullanıcılar":
         if len(aktif_kullanicilar) > 1:
             baslangic = f"{aktif_kullanicilar[0]['lat']},{aktif_kullanicilar[0]['lon']}"
             waypoints = "/".join([f"{k['lat']},{k['lon']}" for k in aktif_kullanicilar[1:]])
-            maps_url = f"https://www.google.com/maps/dir/{baslangic}/{waypoints}"
+            maps_url = f"https://www.google.com/maps/dir/?api=1&{baslangic}/{waypoints}"
             st.markdown(f"[📍 Google Haritalar'da Aç]({maps_url})", unsafe_allow_html=True)
 
 # **Kullanıcı Düzenleme Sayfası**
